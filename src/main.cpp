@@ -39,6 +39,7 @@ int main()
   vector<VectorXd> ground_truth;
 
   h.onMessage([&ukf,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    // cout << "onMessage" << endl;
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -60,7 +61,7 @@ int main()
           
           MeasurementPackage meas_package;
           istringstream iss(sensor_measurment);
-    	  long long timestamp;
+    	   long long timestamp;
 
     	  // reads first element from the current line
     	  string sensor_type;
@@ -90,7 +91,7 @@ int main()
           		iss >> timestamp;
           		meas_package.timestamp_ = timestamp;
           }
-          float x_gt;
+        float x_gt;
     	  float y_gt;
     	  float vx_gt;
     	  float vy_gt;
@@ -105,8 +106,9 @@ int main()
     	  gt_values(3) = vy_gt;
     	  ground_truth.push_back(gt_values);
           
-          //Call ProcessMeasurment(meas_package) for Kalman filter
-    	  ukf.ProcessMeasurement(meas_package);    	  
+        //Call ProcessMeasurment(meas_package) for Kalman filter
+        ukf.ProcessMeasurement(meas_package);
+
 
     	  //Push the current estimated x,y positon from the Kalman filter's state vector
 
@@ -147,6 +149,7 @@ int main()
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }
+    
 
   });
 
