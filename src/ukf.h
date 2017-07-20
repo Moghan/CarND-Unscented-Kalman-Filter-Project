@@ -71,16 +71,12 @@ public:
 
   int n_z;
 
-  //the initial transition matrix F_
-  MatrixXd F_;
-
-  //create aug sigma point matrix
+  //aug sigma point matrix
   MatrixXd Xsig_aug;
 
-//create matrix for sigma points in measurement space
+  //create matrix for sigma points in measurement space
   MatrixXd Zsig;
 
-  // int previous_timestamp_;
 
   MatrixXd R_laser_;
   MatrixXd R_;

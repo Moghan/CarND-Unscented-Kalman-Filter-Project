@@ -11,7 +11,6 @@ using std::vector;
  * Initializes Unscented Kalman filter
  */
 UKF::UKF() {
-  cout << "Hello world" << endl;
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
@@ -23,18 +22,14 @@ UKF::UKF() {
 
   // initial covariance matrix
   P_ = MatrixXd(5, 5);
-  P_ <<   1, 0, 0, 0, 0,
-          0, 1, 0, 0, 0,
-          0, 0, 1, 0, 0,
-          0, 0, 0, 1, 0,
-          0, 0, 0, 0, 1;
+  
 
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 3;
+  std_a_ = 1;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 3;
+  std_yawdd_ = 0.8;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -60,15 +55,18 @@ UKF::UKF() {
   Hint: one or more values initialized above might be wildly off...
   */
 
+  P_ <<   0.2, 0, 0, 0, 0,
+          0, 0.2, 0, 0, 0,
+          0, 0, 0.3, 0, 0,
+          0, 0, 0, 2, 0,
+          0, 0, 0, 0, 1;
+
   n_x_ = 5;
   n_z = 3;
   n_aug_ = 7;
 
   Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
   weights_ = VectorXd(2*n_aug_+1);
-
-  //the initial transition matrix F_
-  // F_ = MatrixXd(4, 4);
 
   //create sigma point matrix
   Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
@@ -95,15 +93,8 @@ UKF::~UKF() {}
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-  cout << "process measurement" << endl;
-  if(meas_package.sensor_type_ == MeasurementPackage::RADAR && !use_radar_) {
-    cout << "NO RADAR" << endl;
-    return;
-  }
-  else if(meas_package.sensor_type_ == MeasurementPackage::LASER && !use_laser_) {
-    cout << "NO LASER" << endl;
-    return;
-  }
+  
+  
   /**
   TODO:
 
@@ -151,10 +142,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
    
     time_us_ = meas_package.timestamp_;
 
-    // done initializing, no need to predict or update
     is_initialized_ = true;
     return;
   }
+
+  // Abort measurement if sensortype is set to not use.
+  if(meas_package.sensor_type_ == MeasurementPackage::RADAR && !use_radar_) return;
+  else if(meas_package.sensor_type_ == MeasurementPackage::LASER && !use_laser_) return;
 
   /*****************************************************************************
    *  Prediction
@@ -214,7 +208,6 @@ void UKF::Prediction(double delta_t) {
   MatrixXd L = P_aug.llt().matrixL();
 
   //create augmented sigma points
-  
   Xsig_aug.col(0)  = x_aug;
 
   lambda_ = 3 - n_aug_;
@@ -358,14 +351,12 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     double v1 = cos(yaw)*v;
     double v2 = sin(yaw)*v;
 
-    // cout << "meas model" << endl;
     // measurement model
     Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);                        //r
     Zsig(1,i) = atan2(p_y,p_x);                                 //phi
     Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
   }
 
-  cout << "mean predict measurement" << endl;
   //mean predicted measurement
   VectorXd z_pred = VectorXd(n_z);
   z_pred.fill(0.0);
@@ -373,7 +364,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
       z_pred = z_pred + weights_(i) * Zsig.col(i);
   }
 
-  cout << " meas covariance matrix" << endl;
   //measurement covariance matrix S
   MatrixXd S = MatrixXd(n_z,n_z);
   S.fill(0.0);
@@ -388,21 +378,17 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     S = S + weights_(i) * z_diff * z_diff.transpose();
   }
 
-  cout << "add meas noise cov matrix" << endl;
   //add measurement noise covariance matrix
   MatrixXd R = MatrixXd(n_z,n_z);
   R <<    std_radr_*std_radr_, 0, 0,
           0, std_radphi_*std_radphi_, 0,
           0, 0,std_radrd_*std_radrd_;
-  cout << "R set" << endl;
   S = S + R;
 
-  cout << "DONE" << endl;
 
 /*  ***************************************************
     *        UPDATE RADAR                             *
     ***************************************************/
-  cout << "update RADAR" << endl;
   //calculate cross correlation matrix
   //create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
@@ -423,7 +409,6 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
     Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
   }
-  cout << " kalman gain" << endl;
   //Kalman gain K;
   MatrixXd K = Tc * S.inverse();
 
@@ -435,9 +420,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
   while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
-  cout << "update state mean and cov matrix" << endl;
   //update state mean and covariance matrix
   x_ = x_ + K * z_diff;
   P_ = P_ - K*S*K.transpose();
-  cout << "DONE" << endl;
 }
